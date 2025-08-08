@@ -23,3 +23,54 @@ Every RAII class author must confront the question: what should happen when an R
 
 - Copying an RAII object entails copying the resources it manages, so the copying behavior of the resource determines the copying behavior of the RAII object.
 - Common RAII class copying behaviors are disallowing copying and performing reference counting, but other behaviors are possible.
+
+# Item 15: Provide access to raw resources in resource-managing classes.
+
+**Things to Remember**
+
+Consider this RAII class for fonts that are native to a C API:
+
+```c++
+FontHandler getFont();
+
+void releaseFont(FontHandle fh);
+
+class Font {
+public:
+  explicit Font(FontHandle fh) : f(fh) {}
+
+  ~Font() { releaseFont(f); }
+
+private:
+  FontHandle f;
+};
+```
+
+We can provide the user of `Font` access to the resources either explicitly or implicitly:
+
+_explicit_
+
+```c++
+class Font {
+public:
+  ...
+  FontHandle get() const { return f; }
+  ...
+};
+```
+
+_implicit_
+
+```c++
+class Font {
+public:
+  ...
+  operator FontHandle() const { return f; }
+  ...
+};
+```
+
+Explicit is safer, implicit can be more natural to the user.
+
+- APIs often require access to raw resources, so each RAII class should offer a way to get at the resource it manages.
+- Access may be via explicit conversion or implicit conversion. In general, explicit conversion is safer, but implicit conversion is more convenient for clients.
