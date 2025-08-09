@@ -102,3 +102,46 @@ delete [] stringPtr2;
 **Things to Remember**
 
 - If you use [] in a `new` expression, you must use [] in the corresponding `delete` expression. If you don't use [] in a `new` expression, you mustn't use [] in the corresponding `delete` expression.
+
+# Item 17: store `new`ed objects in smart pointers in standalone statements.
+
+**Things to Remember**
+
+Consider the following call which will compile:
+
+```c++
+processWidget(std::tr1::shared_ptr<Widget>(new Widget), priority());
+```
+
+Surprisingly, although we're using object-managing resources everywhere here, this call may leak resources. It's illuminating to see how.
+
+Before compilers can generate a call to `processWidget`, they have to evaluate the arguments being passed as its parameters. The second argument is just a call to the function `priority`, but the first argument consists of two parts:
+
+- Execution of the expression "`new Widget`".
+- A call to the `tr1::shared_ptr` constructor.
+
+Before `processWidget` can be called, then, compilers, must generate code to do these three things:
+
+- Call `priority`.
+- Execute `new Widget`.
+- Call the `tr1::shared_ptr` constructor.
+
+C++ compilers are granted considerable latitude in determining the order in which these things are to be done. The "`new Widget`" expression must be executed before the `tr1::shared_ptr` constructor can be called, because the result of the expression is passed as an argument to the `tr1::shared_ptr` constructor, but the call to `priority` can be performed first, second, or third. If compilers choose to perform it second, we end up with this sequence of operations:
+
+1. Execute "`new Widget`".
+2. Call `priority`.
+3. Call the `tr1::shared_ptr` constructor.
+
+But consider what will happen if the call to `priority` yields an exception. In that case, the pointer returned from "`new Widget`" will be lost, because it won't have been stored in the `tr1::shared_ptr` we were expecting would guard against resource leaks. A leak in the call to `processWidget` can arise because an exception can intervene between the time a resource is created and the time that resource is turned over to a resource-managing object.
+
+The way to avoid problems like this is simple: use a separate statement to create the `Widget` and store it in a smart pointer, then pass the smart pointer to `processWidget`:
+
+```c++
+std::tr1::shared_ptr<Widget> pw(new Widget);
+
+processWidget(pw, priority());
+```
+
+**Things to Remember**
+
+- Store `new`ed objects in smart pointers in standalone statements. Failure to do this can lead to subtle resource leaks when exceptions are thrown.
