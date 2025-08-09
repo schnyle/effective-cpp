@@ -72,5 +72,33 @@ public:
 
 Explicit is safer, implicit can be more natural to the user.
 
+**Things to Remember**
+
 - APIs often require access to raw resources, so each RAII class should offer a way to get at the resource it manages.
 - Access may be via explicit conversion or implicit conversion. In general, explicit conversion is safer, but implicit conversion is more convenient for clients.
+
+# Item 16: Use the same form in corresponding uses of `new` and `delete`.
+
+Whats's wrong with this picture?
+
+```c++
+std::string *stringArray = new std::string[100];
+...
+delete stringArray;
+```
+
+The program's behavior is undefined. At the very least, 99 of the 100 `string` objects pointed to by `stringArray` are unlikely to be properly destroyed, because their destructors will probably never be called.
+
+When you use `delete` on a pointer, the only way for `delete` to know whether the array size information is there is for you to tell it. If you use brackets in your use of `delete`, `delete` assumes an array is pointed to. Otherwise, it assumes that a single object is pointed to:
+
+```c++
+std::string *stringPtr1 = new std::string;
+std::string *stringPtr2 = new std::string[100];
+...
+delete stringPtr1;
+delete [] stringPtr2;
+```
+
+**Things to Remember**
+
+- If you use [] in a `new` expression, you must use [] in the corresponding `delete` expression. If you don't use [] in a `new` expression, you mustn't use [] in the corresponding `delete` expression.
